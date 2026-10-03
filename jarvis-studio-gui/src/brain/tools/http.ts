@@ -208,6 +208,7 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
  */
 export const GROUNDING_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 
+
 export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolResult> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, summary: "What should I look up, sir?" };
