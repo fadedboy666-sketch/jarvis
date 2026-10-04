@@ -211,6 +211,38 @@ export const GROUNDING_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolResult> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, summary: "What should I look up, sir?" };
+  const tavilyKey = (import.meta as any).env?.VITE_TAVILY_KEY as string | undefined;
+  if (tavilyKey) {
+    try {
+      const tv = await postJson<{
+        answer?: string;
+        results?: { title?: string; content?: string }[];
+      }>(
+        "https://api.tavily.com/search",
+        JSON.stringify({
+          query: q,
+          search_depth: "basic",
+          max_results: 5,
+          include_answer: true,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tavilyKey}`,
+          },
+          timeoutMs: 15000,
+        },
+      );
+      const facts = (tv.results ?? [])
+        .slice(0, 5)
+        .map((r) => `${r.title ?? ""}: ${r.content ?? ""}`)
+        .join("\n");
+      const summary = [tv.answer, facts].filter(Boolean).join("\n\n").trim();
+      if (summary) return { ok: true, summary };
+    } catch {
+      // fall through to the old Gemini search below
+    }
+  }
   // Grounded search is a one-shot side call, not a chat turn: it walks its own short
   // ladder (both grounding models × every Gemini key) rather than the chat ladder.
   const keys = ctx.config.keys.gemini ?? [];
