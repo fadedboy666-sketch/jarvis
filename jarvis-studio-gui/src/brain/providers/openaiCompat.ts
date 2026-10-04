@@ -121,7 +121,7 @@ export class OpenAICompatProvider implements LLMProvider {
       // Cap generation for mechanical callers. Turn reasoning down too, but ONLY
       // where the field is accepted — a plain llama 400s on an unknown param.
       ...(opts?.maxOutputTokens ? { [this.preset.maxTokensField]: opts.maxOutputTokens } : {}),
-      ...(opts?.disableThinking && this.preset.reasoningEffort && /gpt-oss|qwen/i.test(model)
+      ...( this.preset.reasoningEffort && /gpt-oss|qwen/i.test(model)
         ? { reasoning_effort: "low" as const }
         : {}),
     };
