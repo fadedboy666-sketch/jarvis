@@ -24,7 +24,7 @@ import { RemoteScreen } from "../brain/remote/webrtcScreen";
 import { invoke } from "@tauri-apps/api/core";
 import { authenticate, checkStatus } from "@tauri-apps/plugin-biometric";
 import { webSpeechTTS } from "../brain/platform/webspeech";
-import { MicRecorder, transcribe } from "../brain/platform/stt";
+import { MicRecorder, transcribe, isNoiseTranscript } from "../brain/platform/stt";
 import { syncWakeWord } from "../brain/platform/wakeword";
 import { syncStopOverlay } from "../brain/platform/stopOverlay";
 import { subscribeTelemetry } from "../brain/platform/deviceTelemetry";
