@@ -211,6 +211,44 @@ export const GROUNDING_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolResult> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, summary: "What should I look up, sir?" };
+    // Live price from Twelve Data (falls back to normal search if anything fails)
+  let priceNote = "";
+  const tdKey = (import.meta as any).env?.VITE_TWELVEDATA_KEY as string | undefined;
+  if (tdKey) {
+    const ql = q.toLowerCase();
+    const pairs: [RegExp, string][] = [
+      [/\beur\b|\beuro\b|eur\/?usd/, "EUR/USD"],
+      [/\bgbp\b|\bpound\b|gbp\/?usd/, "GBP/USD"],
+      [/\byen\b|\bjpy\b|usd\/?jpy/, "USD/JPY"],
+      [/\bgold\b|\bxau\b/, "XAU/USD"],
+      [/\bbitcoin\b|\bbtc\b/, "BTC/USD"],
+      [/\bethereum\b|\beth\b/, "ETH/USD"],
+    ];
+    const hit = pairs.find(([re]) => re.test(ql));
+    if (hit) {
+      try {
+        const td = await getJson<{
+          close?: string;
+          change?: string;
+          percent_change?: string;
+          datetime?: string;
+          status?: string;
+        }>(
+          "https://api.twelvedata.com/quote?symbol=" + encodeURIComponent(hit[1]) + "&apikey=" + tdKey,
+          { timeoutMs: 8000 },
+        );
+        if (td.close && td.status !== "error") {
+          priceNote =
+            "LIVE PRICE (Twelve Data): " + hit[1] + " is " + td.close +
+            ", day change " + (td.change ?? "unknown") + " (" + (td.percent_change ?? "unknown") +
+            " percent), as of " + (td.datetime ?? "unknown time") +
+            ". Use this number for the price.";
+        }
+      } catch {
+        // ignore and fall back to normal search
+      }
+    }
+  }
   const tavilyKey = (import.meta as any).env?.VITE_TAVILY_KEY as string | undefined;
   if (tavilyKey) {
     try {
