@@ -222,7 +222,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
         JSON.stringify({
           query: q,
           search_depth: "basic",
-          max_results: 5,
+          max_results: 3,
           include_answer: true,
         }),
         {
@@ -234,7 +234,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
         },
       );
       const facts = (tv.results ?? [])
-        .slice(0, 5)
+        .slice(0, 3)
         .map((r) => `${r.title ?? ""}: ${r.content ?? ""}`)
         .join("\n");
       const summary = [tv.answer, facts].filter(Boolean).join("\n\n").trim();
