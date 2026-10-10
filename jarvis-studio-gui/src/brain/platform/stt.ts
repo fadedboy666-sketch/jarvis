@@ -323,7 +323,7 @@ const HALLUCINATION_PHRASES = new Set([
 ]);
 
 // The wake word may already be stripped, so match the prompt's tail.
-const PROMPT_ECHO = /^(hey jarvis )?a voice command for a phone assistant$/;
+const PROMPT_ECHO = /voice command for a phone assistant/;
 
 export function isNoiseTranscript(text: string): boolean {
   const norm = (text || "")
