@@ -167,6 +167,7 @@ export async function transcribeWithGroq(
   groqKey: string,
   prompt = WHISPER_PROMPT,
 ): Promise<string> {
+  if (blob.size < 3000) return "";
   const type = blob.type || "";
   const ext = type.includes("wav") ? "wav" : type.includes("mp4") ? "m4a" : "webm";
   const form = new FormData();
