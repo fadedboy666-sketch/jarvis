@@ -45,7 +45,9 @@ export class MicRecorder {
   /** Begin capturing. Throws if mic permission is denied / unavailable. */
   async start(): Promise<void> {
     if (this.recording) return;
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.stream = await navigator.mediaDevices.getUserMedia({
+  audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true },
+});
     this.chunks = [];
     const mime = pickRecordMime();
     this.recorder = mime
