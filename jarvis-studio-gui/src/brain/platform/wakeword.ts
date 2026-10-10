@@ -73,7 +73,7 @@ export interface WakeWordOpts {
 // So rather than guess at the trigger, bound every wait and supervise the state:
 // whatever wedges it, it un-wedges itself within HANDLING_MAX_MS and says so.
 const CAPTURE_TIMEOUT_MS = COMMAND_MS + 6000; // record window + mic start/stop slack
-const HANDLING_MAX_MS = 45000; // ceiling on one wake→command→resume cycle
+const HANDLING_MAX_MS = 240000; // ceiling on one wake→command→resume cycle
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
