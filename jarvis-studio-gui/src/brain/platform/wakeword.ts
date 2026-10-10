@@ -28,7 +28,7 @@ export function heardWakePhrase(text: string): boolean {
 
 // Ceiling only: capture ends ~0.9s after you stop talking (MicRecorder.untilSilence).
 // Was a fixed 6s window — every command waited the full 6s, and longer ones got cut.
-const COMMAND_MS = 10000;
+const COMMAND_MS = 180000;
 const POLL_MS = 140; // how often JS asks the native engine "any new detection?" — low
 // enough that a wake is picked up almost immediately (the poll is a cheap atomic read).
 const POLL_STUCK_MS = 3000; // a poll unanswered this long is presumed dropped
