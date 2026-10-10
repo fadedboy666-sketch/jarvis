@@ -222,7 +222,14 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       [/\byen\b|\bjpy\b|usd\/?jpy/, "USD/JPY"],
       [/\bgold\b|\bxau\b/, "XAU/USD"],
       [/\bbitcoin\b|\bbtc\b/, "BTC/USD"],
-      [/\bethereum\b|\beth\b/, "ETH/USD"],
+      [/\bethereum\b|\beth\b/, "ETH/USD"],      [/\bs&p\b|\bspx\b|\bsp ?500\b/, "SPX"],
+      [/\bnasdaq\b|\bndx\b/, "NDX"],
+      [/\btesla\b|\btsla\b/, "TSLA"],
+      [/\bnetflix\b|\bnflx\b/, "NFLX"],
+      [/\bgoogle\b|\balphabet\b|\bgoogl\b/, "GOOGL"],
+      [/\bmicrosoft\b|\bmsft\b/, "MSFT"],
+      [/\bnvidia\b|\bnvda\b/, "NVDA"],
+      [/\bamazon\b|\bamzn\b/, "AMZN"],
     ];
     const hit = pairs.find(([re]) => re.test(ql));
     if (hit) {
