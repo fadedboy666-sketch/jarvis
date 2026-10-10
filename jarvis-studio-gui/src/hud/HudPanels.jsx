@@ -1062,7 +1062,7 @@ export function MemoryOverlay({
                   onChange={(e) => setDraft(e.target.value)}
                   aria-label="New fact"
                   placeholder="Something JARVIS should always know — e.g. I'm vegetarian"
-                  maxLength={300}
+                  maxLength={1000}
                 />
                 <button type="submit" disabled={!draft.trim()}>
                   Remember
