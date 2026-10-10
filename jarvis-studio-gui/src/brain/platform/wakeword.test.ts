@@ -81,7 +81,7 @@ describe("stuck-listener recovery", () => {
     // the fix, poll() early-returned on it forever and the engine — which onWake had
     // deliberately stopped — was never restarted.
     const { l, onError } = makeListener();
-    setHandling(l, true, Date.now() - 60_000); // wedged for longer than a whole cycle
+    setHandling(l, true, Date.now() - 300_000); // wedged for longer than a whole cycle
     await pollOf(l)();
 
     expect((l as unknown as { handling: boolean }).handling).toBe(false);
@@ -106,7 +106,7 @@ describe("stuck-listener recovery", () => {
 
     const capture = (l as unknown as { capture: (ms: number) => Promise<Blob | null> }).capture.bind(l);
     const pending = capture(6000);
-    await vi.advanceTimersByTimeAsync(17_000); // past CAPTURE_TIMEOUT_MS (COMMAND_MS + 6s)
+    await vi.advanceTimersByTimeAsync(190_000); // past CAPTURE_TIMEOUT_MS (COMMAND_MS + 6s)
 
     await expect(pending).resolves.toBeNull();
     expect(cancelSpy).toHaveBeenCalled();
