@@ -24,6 +24,7 @@ jobs:
         env:
           NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
           VITE_TAVILY_KEY: ${{ secrets.TAVILY_KEY }}
+          VITE_TWELVEDATA_KEY: ${{ secrets.TWELVEDATA_KEY }}
         run: npx tauri android build --debug --apk --target aarch64
       - uses: actions/upload-artifact@v4
         with:
