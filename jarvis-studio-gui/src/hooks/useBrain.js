@@ -1586,12 +1586,93 @@ export function useBrain() {
     finishListenRef.current = finishListen;
   }, [finishListen]);
 
-  // Tap-to-talk: first tap starts listening, second tap stops + sends.
-  const triggerListen = useCallback(() => {
-    if (listeningRef.current) finishListen();
-    else startListen();
-  }, [startListen, finishListen]);
+    // Continuous mic: tap once = keeps listening, sends after a pause, resumes after
+  // JARVIS replies. Tap again = stop.
+  const continuousRef = useRef(false);
+  const statusRef = useRef("idle");
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
+  const stopContinuous = useCallback(() => {
+    continuousRef.current = false;
+    clearTimeout(listenTimerRef.current);
+    listeningRef.current = false;
+    micRef.current?.cancel();
+    webSpeechTTS.stop();
+    setStatus("idle");
+  }, []);
+
+  const runContinuous = useCallback(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    let missed = 0;
+    let errors = 0;
+    while (continuousRef.current) {
+      try {
+        while (
+          continuousRef.current &&
+          (busyRef.current ||
+            statusRef.current === "speaking" ||
+            statusRef.current === "thinking")
+        ) {
+          await sleep(300);
+        }
+        if (!continuousRef.current) break;
+        if (!micRef.current) micRef.current = new MicRecorder();
+        await micRef.current.start();
+        listeningRef.current = true;
+        setStatus("listening");
+        const heard = await micRef.current.untilSilence(180000, 2500, 15000);
+        listeningRef.current = false;
+        const blob = await micRef.current.stop();
+        if (!continuousRef.current) break;
+        if (!heard || !blob) continue;
+        setStatus("thinking");
+        const text = await transcribe(blob, {
+          groqKey: stored.groqKey,
+          vertexSaJson: stored.vertexSaJson,
+        });
+        if (!text || isNoiseTranscript(text)) {
+          setStatus("idle");
+          if (missed === 0 && !mutedRef.current) {
+            missed = 1;
+            await webSpeechTTS.speak("Didn't catch that, say it again.");
+          }
+          continue;
+        }
+        missed = 0;
+        errors = 0;
+        await sendMessage(text);
+        await sleep(400);
+      } catch (e) {
+        listeningRef.current = false;
+        errors += 1;
+        if (errors >= 3) {
+          pushWarning("Mic stopped: " + (e?.message || e));
+          continuousRef.current = false;
+          setStatus("idle");
+        } else {
+          await sleep(1500);
+        }
+      }
+    }
+    listeningRef.current = false;
+  }, [stored.groqKey, stored.vertexSaJson, sendMessage, pushWarning]);
+
+  const triggerListen = useCallback(() => {
+    if (continuousRef.current) {
+      stopContinuous();
+      return;
+    }
+    if (!stored.groqKey && !stored.vertexSaJson) {
+      pushWarning(
+        "Voice input needs either a Vertex AI Service Account or Groq API key. Add one in Settings.",
+      );
+      return;
+    }
+    continuousRef.current = true;
+    void runContinuous();
+  }, [stored.groqKey, stored.vertexSaJson, pushWarning, runContinuous, stopContinuous]);
   // ── "Hey Jarvis" wake word (on-device openWakeWord via tauri-plugin-phone) ──
   // Runs whenever the toggle is on and a transcription credential exists. The
   // native engine listens locally for free; on detection we record the command,
