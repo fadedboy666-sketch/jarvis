@@ -364,7 +364,7 @@ export class WakeWordListener {
       return await withTimeout(
         (async () => {
           await this.rec.start();
-          await this.rec.untilSilence(ms);
+          await this.rec.untilSilence(ms, 2500);
           return this.rec.stop();
         })(),
         CAPTURE_TIMEOUT_MS,
