@@ -1661,7 +1661,7 @@ export function useBrain() {
     greetedRef.current = true;
     const hour = new Date().getHours();
     const part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-    const text = `${part}, sir. JARVIS online and at your service. How can I help?`;
+    const text = "Yo bro what's up"; //const text = `${part}, sir. JARVIS online and at your service. How can I help?`;
     setMessages((prev) =>
       prev.length ? prev : [{ role: "jarvis", text, actions: [], finalized: true, id: uid() }],
     );
