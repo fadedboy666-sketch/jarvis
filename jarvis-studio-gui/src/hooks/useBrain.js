@@ -76,6 +76,15 @@ const PROMPT_TIMEOUT_MS = 90_000;
 // a ceiling a forgotten second tap leaves listeningRef true, and isBusy() reads it,
 // so "Hey Jarvis" goes quietly dead for the rest of the session.
 const MAX_LISTEN_MS = 30_000;
+// Slow-question filler: said + shown instantly so Jarvis never feels dead.
+const SLOW_RE =
+  /\b(price|prices|bitcoin|btc|ethereum|eth|gold|oil|eur\/?usd|gbp\/?usd|usd\/?jpy|s&p|spx|nasdaq|ndx|tesla|nvidia|netflix|microsoft|amazon|news|headlines|nfp|fomc|cpi|calendar|research|sentiment|score|weather)\b/i;
+const FILLERS = [
+  "Checking that, hold on bro.",
+  "On it bro, pulling that up.",
+  "Give me a sec, grabbing the data.",
+  "Looking that up, one moment.",
+];
 
 const CONFIG_KEY = "jarvis.android.config.v1";
 const PC_KEY = "jarvis.android.pc.v1";
