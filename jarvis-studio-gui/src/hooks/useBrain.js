@@ -1289,6 +1289,7 @@ export function useBrain() {
           { role: "jarvis", text: spoken, actions: drainCards(), finalized: true, id: replyId },
         ]);
       }
+            await fillerDone;
       // Speak the reply via the device TTS (unless muted). "speaking" status drives
       // the HUD waveform; it always returns to idle even if TTS stalls.
       try {
