@@ -1259,6 +1259,21 @@ export function useBrain() {
       busyRef.current = true;
       setStatus("thinking");
       const replyId = uid();
+            let fillerDone = Promise.resolve();
+      if (SLOW_RE.test(t)) {
+        const line = FILLERS[Math.floor(Math.random() * FILLERS.length)];
+        setMessages((prev) => [
+          ...prev,
+          { role: "jarvis", text: line, actions: [], finalized: true, id: uid() },
+        ]);
+        if (!mutedRef.current) {
+          setStatus("speaking");
+          fillerDone = webSpeechTTS
+            .speak(line)
+            .catch(() => {})
+            .then(() => setStatus("thinking"));
+        }
+      }
       let spoken = "";
       try {
         const reply = await brainRef.current.ask(t);
