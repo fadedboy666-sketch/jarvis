@@ -302,6 +302,11 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
               ". Say these numbers exactly. Core CPI is not included here.",
           };
         }
+              return {
+        ok: true,
+        summary:
+          "ECONOMIC CALENDAR: no high-impact events are left this week in the Forex Factory feed (next week's list appears when the feed rolls over, usually Sunday). Say that plainly, do not guess other events, and offer to recap this week's data from the news.",
+      };
       } catch {
         // fall through to normal search
       }
