@@ -243,7 +243,71 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
   }
     // Live price from Twelve Data (falls back to normal search if anything fails)
   let priceNote = "";
-    if (/\b(calendar|nfp|non.?farm|fomc|cpi|economic events?|economic data|jobs report|rate decision|high impact)\b/.test(q.toLowerCase())) {
+    {
+    const ql = q.toLowerCase();
+    const fredKey = (import.meta as any).env?.VITE_FRED_KEY as string | undefined;
+    if (
+      fredKey &&
+      /\b(cpi|inflation|unemployment|jobless rate|payrolls?|nfp|non.?farm|jobs report|fed funds|interest rates?)\b/.test(ql) &&
+      /\b(result|actual|came out|came in|released|latest|last|current|currently|what was|what is|how much)\b/.test(ql)
+    ) {
+      const obs = async (id: string, n: number) => {
+        const r = await getJson<{ observations?: Array<{ date?: string; value?: string }> }>(
+          "https://api.stlouisfed.org/fred/series/observations?series_id=" + id +
+            "&api_key=" + fredKey + "&file_type=json&sort_order=desc&limit=" + n,
+          { timeoutMs: 8000 },
+        );
+        return (r.observations ?? [])
+          .filter((o) => o.value && o.value !== ".")
+          .map((o) => ({ date: o.date ?? "", v: Number(o.value) }));
+      };
+      try {
+        const parts: string[] = [];
+        if (/\b(cpi|inflation)\b/.test(ql)) {
+          const nsa = await obs("CPIAUCNS", 13);
+          const sa = await obs("CPIAUCSL", 2);
+          const a = nsa[0], b = nsa[12], c = sa[0], d = sa[1];
+          if (a && b && c && d) {
+            parts.push(
+              "CPI for " + a.date.slice(0, 7) + ": " + ((a.v / b.v - 1) * 100).toFixed(1) +
+                " percent year over year, " + ((c.v / d.v - 1) * 100).toFixed(1) +
+                " percent month over month (headline, not core)",
+            );
+          }
+        }
+        if (/\b(payrolls?|nfp|non.?farm|jobs report)\b/.test(ql)) {
+          const p = await obs("PAYEMS", 2);
+          const a = p[0], b = p[1];
+          if (a && b) {
+            parts.push("Nonfarm payrolls for " + a.date.slice(0, 7) + ": " + Math.round(a.v - b.v) + " thousand jobs added");
+          }
+        }
+        if (/\b(unemployment|jobless rate|jobs report)\b/.test(ql)) {
+          const u = await obs("UNRATE", 2);
+          const a = u[0], b = u[1];
+          if (a) {
+            parts.push("Unemployment rate for " + a.date.slice(0, 7) + ": " + a.v + " percent" + (b ? ", previous " + b.v + " percent" : ""));
+          }
+        }
+        if (/\b(fed funds|interest rates?)\b/.test(ql)) {
+          const f = await obs("DFF", 1);
+          const a = f[0];
+          if (a) parts.push("Effective fed funds rate on " + a.date + ": " + a.v + " percent");
+        }
+        if (parts.length) {
+          return {
+            ok: true,
+            summary:
+              "RELEASED DATA (FRED, official, may be revised): " + parts.join(". ") +
+              ". Say these numbers exactly. Core CPI is not included here.",
+          };
+        }
+      } catch {
+        // fall through to normal search
+      }
+    }
+                                                        }  
+  if (/\b(calendar|nfp|non.?farm|fomc|cpi|economic events?|economic data|jobs report|rate decision|high impact)\b/.test(q.toLowerCase())) {
     try {
       const ev = await getJson<
         Array<{ title?: string; country?: string; date?: string; impact?: string; forecast?: string; previous?: string }>
