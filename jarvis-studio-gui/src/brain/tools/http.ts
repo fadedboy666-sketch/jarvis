@@ -244,7 +244,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
     // Live price from Twelve Data (falls back to normal search if anything fails)
   let priceNote = "";
   const tdKey = (import.meta as any).env?.VITE_TWELVEDATA_KEY as string | undefined;
-  if (tdKey) {
+    if (tdKey && !fastNote) {
     const ql = q.toLowerCase();
     const pairs: [RegExp, string][] = [
       [/\beur\b|\beuro\b|eur\/?usd/, "EUR/USD"],
