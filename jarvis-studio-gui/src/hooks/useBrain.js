@@ -1533,7 +1533,7 @@ export function useBrain() {
         // Only offer the "draw over other apps" grant after the user has really used
         // JARVIS (so the launch greeting never pulls them into system settings), and
         // never mid phone-task (that path already has the free accessibility overlay).
-        promptPermission: userInteractedRef.current && !taskCenterActive,
+        promptPermission: false,
         onNeedsPermission: () =>
           pushWarning(
             "Opening a system setting so JARVIS can show a STOP button over other apps — turn on “Draw over other apps”, then it'll appear whenever JARVIS is speaking or busy.",
