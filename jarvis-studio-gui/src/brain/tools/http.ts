@@ -243,6 +243,39 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
   }
     // Live price from Twelve Data (falls back to normal search if anything fails)
   let priceNote = "";
+    if (/\b(calendar|nfp|non.?farm|fomc|cpi|economic events?|economic data|jobs report|rate decision|high impact)\b/.test(q.toLowerCase())) {
+    try {
+      const ev = await getJson<
+        Array<{ title?: string; country?: string; date?: string; impact?: string; forecast?: string; previous?: string }>
+      >("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { timeoutMs: 8000 });
+      const rows = (Array.isArray(ev) ? ev : [])
+        .filter((e) => e.impact === "High" || (e.country === "USD" && e.impact === "Medium"))
+        .filter((e) => !e.date || new Date(e.date).getTime() > Date.now() - 3600000)
+        .slice(0, 20)
+        .map((e) => {
+          const d = e.date ? new Date(e.date) : null;
+          const when =
+            d && !isNaN(d.getTime())
+              ? d.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })
+              : "time unknown";
+          return (
+            (e.country ?? "") + " " + (e.title ?? "") + " at " + when +
+            (e.forecast ? ", forecast " + e.forecast : "") +
+            (e.previous ? ", previous " + e.previous : "")
+          );
+        });
+      if (rows.length) {
+        return {
+          ok: true,
+          summary:
+            "ECONOMIC CALENDAR THIS WEEK (Forex Factory feed, user's local time, forecasts only, not results; tell the user to confirm on an economic calendar): " +
+            rows.join(" | "),
+        };
+      }
+    } catch {
+      // fall through to normal search
+    }
+    }
   const tdKey = (import.meta as any).env?.VITE_TWELVEDATA_KEY as string | undefined;
     if (tdKey && !fastNote) {
     const ql = q.toLowerCase();
