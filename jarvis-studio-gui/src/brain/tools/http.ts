@@ -314,7 +314,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
         .slice(0, 3)
         .map((r) => `${r.title ?? ""}: ${r.content ?? ""}`)
         .join("\n");
-      const summary = [priceNote,tv.answer, facts].filter(Boolean).join("\n\n").trim();
+      const summary = [fastNote, priceNote, tv.answer, facts].filter(Boolean).join("\n\n").trim();
       if (summary) return { ok: true, summary };
     } catch {
       // fall through to the old Gemini search below
