@@ -211,6 +211,36 @@ export const GROUNDING_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolResult> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, summary: "What should I look up, sir?" };
+    const NEWS_WORDS =
+    /\b(why|news|analysis|analyze|reason|forecast|predict|sentiment|research|headline|headlines|happening|drop|dropping|pump|crash|chart|level|levels)\b/;
+  let fastNote = "";
+  {
+    const qc = q.toLowerCase();
+    const coin = /\bbitcoin\b|\bbtc\b/.test(qc)
+      ? "BTC"
+      : /\bethereum\b|\beth\b/.test(qc)
+        ? "ETH"
+        : "";
+    if (coin) {
+      const [cb, bn] = await Promise.all([
+        getJson<{ data?: { amount?: string } }>(
+          "https://api.coinbase.com/v2/prices/" + coin + "-USD/spot",
+          { timeoutMs: 5000 },
+        ).catch(() => null),
+        getJson<{ price?: string }>(
+          "https://api.binance.com/api/v3/ticker/price?symbol=" + coin + "USDT",
+          { timeoutMs: 5000 },
+        ).catch(() => null),
+      ]);
+      const parts: string[] = [];
+      if (cb?.data?.amount) parts.push(coin + "/USD on Coinbase is " + cb.data.amount);
+      if (bn?.price) parts.push(coin + "/USDT on Binance is " + Number(bn.price).toFixed(2));
+      if (parts.length) {
+        fastNote =
+          "LIVE PRICE: " + parts.join("; ") + ". Say the exact number with decimals, never round.";
+      }
+    }
+  }
     // Live price from Twelve Data (falls back to normal search if anything fails)
   let priceNote = "";
   const tdKey = (import.meta as any).env?.VITE_TWELVEDATA_KEY as string | undefined;
