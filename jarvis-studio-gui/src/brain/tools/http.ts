@@ -286,6 +286,8 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       }
     }
   }
+    const quickNote = fastNote || priceNote;
+  if (quickNote && !NEWS_WORDS.test(q.toLowerCase())) return { ok: true, summary: quickNote };
   const tavilyKey = (import.meta as any).env?.VITE_TAVILY_KEY as string | undefined;
   if (tavilyKey) {
     try {
