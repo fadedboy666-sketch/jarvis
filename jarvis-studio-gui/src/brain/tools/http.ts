@@ -248,7 +248,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
     const fredKey = (import.meta as any).env?.VITE_FRED_KEY as string | undefined;
     if (
       fredKey &&
-      /\b(cpi|inflation|unemployment|jobless rate|payrolls?|nfp|non.?farm|jobs report|fed funds|interest rates?)\b/.test(ql) &&
+      /\b(cpi|inflation|unemployment|jobless rate|payrolls?|nfp|non.?farm|jobs report|fed funds|interest rates?|fomc|rate decision)\b/.test(ql) &&
       /\b(result|actual|came out|came in|released|latest|last|current|currently|what was|what is|how much)\b/.test(ql)
     ) {
       const obs = async (id: string, n: number) => {
@@ -289,7 +289,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
             parts.push("Unemployment rate for " + a.date.slice(0, 7) + ": " + a.v + " percent" + (b ? ", previous " + b.v + " percent" : ""));
           }
         }
-        if (/\b(fed funds|interest rates?)\b/.test(ql)) {
+        if (/\b(fed funds|interest rates?|fomc|rate decision)\b/.test(ql)) {
           const f = await obs("DFF", 1);
           const a = f[0];
           if (a) parts.push("Effective fed funds rate on " + a.date + ": " + a.v + " percent");
