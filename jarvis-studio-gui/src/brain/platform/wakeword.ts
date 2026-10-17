@@ -351,6 +351,7 @@ export class WakeWordListener {
       }
       console.info(`[wake] ignored — no "Hey Jarvis" in the wake audio: "${text.slice(0, 60)}"`);
       return false;
+            this.opts.onError?.(`Heard "${text.slice(0, 40)}", which isn't a clear Hey Jarvis`);
     } catch (e) {
       console.warn("[wake] couldn't check the wake audio; accepting the wake:", e);
       return true;
