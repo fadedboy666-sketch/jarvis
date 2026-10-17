@@ -1306,6 +1306,57 @@ export function useBrain() {
   );
 
   // Quick-action buttons fire a command without echoing a user bubble. On mobile we
+    // Photo / chart screenshot → vision model. Shrunk to a small JPEG first.
+  const sendUpload = useCallback(
+    async (file, prompt = "") => {
+      if (!file || busyRef.current || !brainRef.current) return;
+      if (!file.type || !file.type.startsWith("image/")) {
+        pushWarning("On the phone I can only look at pictures for now.");
+        return;
+      }
+      let b64 = "";
+      try {
+        const bmp = await createImageBitmap(file);
+        const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bmp.width * scale);
+        canvas.height = Math.round(bmp.height * scale);
+        canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+        b64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1] || "";
+      } catch {
+        b64 = "";
+      }
+      if (!b64) {
+        pushWarning("I couldn't read that picture.");
+        return;
+      }
+      const t = (prompt || "").trim() || "Look at this image and tell me what you see.";
+      userInteractedRef.current = true;
+      setMessages((prev) => [...prev, { role: "user", text: "(photo) " + t, id: uid() }]);
+      busyRef.current = true;
+      setStatus("thinking");
+      let spoken = "";
+      try {
+        spoken = await brainRef.current.ask(t, [b64]);
+      } catch (err) {
+        spoken = `Sorry, I hit an error: ${err?.message || err}`;
+      }
+      setMessages((prev) => [
+        ...prev,
+        { role: "jarvis", text: spoken, actions: drainCards(), finalized: true, id: uid() },
+      ]);
+      try {
+        if (!mutedRef.current && spoken) {
+          setStatus("speaking");
+          await webSpeechTTS.speak(spoken);
+        }
+      } finally {
+        busyRef.current = false;
+        setStatus("idle");
+      }
+    },
+    [drainCards, pushWarning],
+  );
   // just treat it as a normal turn (the brain decides whether to act/answer).
   const sendCommand = useCallback(
     (text) => {
