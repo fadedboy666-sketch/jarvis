@@ -319,7 +319,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       >("https://nfs.faireconomy.media/ff_calendar_thisweek.json", { timeoutMs: 8000 });
       const rows = (Array.isArray(ev) ? ev : [])
         .filter((e) => e.impact === "High" || (e.country === "USD" && e.impact === "Medium"))
-        .filter((e) => !e.date || new Date(e.date).getTime() > Date.now() - 3600000)
+                .filter((e) => /\b(happened|recap|missed|already|so far|past|yesterday|earlier)\b/.test(q.toLowerCase()) || !e.date || new Date(e.date).getTime() > Date.now() - 3600000)
         .slice(0, 20)
         .map((e) => {
           const d = e.date ? new Date(e.date) : null;
