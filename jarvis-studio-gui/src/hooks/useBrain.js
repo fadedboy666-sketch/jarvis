@@ -1575,7 +1575,7 @@ export function useBrain() {
   // OTHER app is in the foreground driving phone_task's actions.
   useEffect(() => {
     syncStopOverlay(
-      taskCenterActive || status === "speaking",
+      false,
       () => {
         stopAllTasks();
         stopSpeech();
