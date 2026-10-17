@@ -93,7 +93,7 @@ export function createBrain(opts: BrainOptions = {}): Brain {
     const messages: ChatMessage[] = [
       { role: "system", content: buildSystemPrompt(config, facts, deps.remote != null) },
       ...history,
-      { role: "user", content: text },
+      { role: "user", content: text, ...(images?.length ? { images } : {}) },
     ];
 
     const { reply } = await runTurn(messages, tools, deps, opts.onFallback);
