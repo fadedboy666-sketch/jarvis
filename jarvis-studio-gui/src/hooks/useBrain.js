@@ -2165,7 +2165,7 @@ export function useBrain() {
     setMute,
     runAction,
     setBrowserOpen: () => {},
-    sendUpload: () => pushWarning("File upload isn't available on the phone yet."),
+    sendUpload,
     sendScreen,
     setAlwaysOnMode,
     setConversationModeOn,
