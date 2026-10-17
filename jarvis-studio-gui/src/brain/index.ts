@@ -25,7 +25,7 @@ import { isImageGenerationRequest } from "./modelPolicy";
 const SENT_HISTORY_TURNS = 12;
 
 export interface Brain {
-  ask(text: string): Promise<string>;
+  ask(text: string, images?: string[]): Promise<string>;
   get config(): BrainConfig;
 }
 
