@@ -1489,7 +1489,7 @@ export function ChatOverlay({
       }
       footer={
         <div className="cv-compose">
-          {onUpload && !IS_MOBILE && (
+           {onUpload && (
             <>
               <input
                 ref={fileRef}
