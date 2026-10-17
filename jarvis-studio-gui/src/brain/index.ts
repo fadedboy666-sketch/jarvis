@@ -53,7 +53,7 @@ export function createBrain(opts: BrainOptions = {}): Brain {
   const memory = opts.memory ?? createStore();
   const platform = opts.platform ?? androidPlatform;
 
-  async function ask(text: string): Promise<string> {
+  async function ask(text: string, images?: string[]): Promise<string> {
     const config = getConfig();
     const location = new LocationService(config.pinnedLocation);
     const deps: DispatchDeps = {
