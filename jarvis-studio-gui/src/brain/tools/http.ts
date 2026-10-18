@@ -629,7 +629,15 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       );
       const facts = (tv.results ?? [])
         .slice(0, 3)
-        .map((r) => `${r.title ?? ""}: ${r.content ?? ""}`)
+                .map((r) => {
+          let src = "";
+          try {
+            src = new URL(r.url ?? "").hostname.replace(/^www\./, "");
+          } catch {
+            /* no url */
+          }
+          return `${r.title ?? ""} [${src || "unknown source"}${r.published_date ? ", " + r.published_date : ""}]: ${r.content ?? ""}`;
+        })
         .join("\n");
       const summary = [fastNote, priceNote, tv.answer, facts].filter(Boolean).join("\n\n").trim();
       if (summary) return { ok: true, summary };
