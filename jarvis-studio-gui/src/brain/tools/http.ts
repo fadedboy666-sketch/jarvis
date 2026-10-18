@@ -208,9 +208,91 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
  */
 export const GROUNDING_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 
+async function econSnapshot(): Promise<string> {
+  const fk = (import.meta as any).env?.VITE_FRED_KEY as string | undefined;
+  type Ev = { title?: string; country?: string; date?: string; impact?: string; forecast?: string; previous?: string };
+  type Def = { re: RegExp; id: string; n: number; unit: "%" | "K"; f: (o: number[]) => [number, number] };
+  const pc = (a: number, b: number) => (a / b - 1) * 100;
+  const defs: Def[] = [
+    { re: /^CPI m\/m$/i, id: "CPIAUCSL", n: 3, unit: "%", f: (o) => [pc(o[0], o[1]), pc(o[1], o[2])] },
+    { re: /^CPI y\/y$/i, id: "CPIAUCNS", n: 14, unit: "%", f: (o) => [pc(o[0], o[12]), pc(o[1], o[13])] },
+    { re: /^Core CPI m\/m$/i, id: "CPILFESL", n: 3, unit: "%", f: (o) => [pc(o[0], o[1]), pc(o[1], o[2])] },
+    { re: /^Core CPI y\/y$/i, id: "CPILFENS", n: 14, unit: "%", f: (o) => [pc(o[0], o[12]), pc(o[1], o[13])] },
+    { re: /^Non-Farm Employment Change$/i, id: "PAYEMS", n: 3, unit: "K", f: (o) => [o[0] - o[1], o[1] - o[2]] },
+    { re: /^Unemployment Rate$/i, id: "UNRATE", n: 2, unit: "%", f: (o) => [o[0], o[1]] },
+    { re: /^Unemployment Claims$/i, id: "ICSA", n: 2, unit: "K", f: (o) => [o[0] / 1000, o[1] / 1000] },
+    { re: /^Retail Sales m\/m$/i, id: "RSAFS", n: 3, unit: "%", f: (o) => [pc(o[0], o[1]), pc(o[1], o[2])] },
+    { re: /^Average Hourly Earnings m\/m$/i, id: "CES0500000003", n: 3, unit: "%", f: (o) => [pc(o[0], o[1]), pc(o[1], o[2])] },
+  ];
+  const num = (s?: string): number | null => {
+    const m = /^(-?\d+(?:\.\d+)?)\s*([%KMB]?)/i.exec((s ?? "").trim());
+    if (!m) return null;
+    const u = m[2].toUpperCase();
+    if (u === "B") return null;
+    return u === "M" ? Number(m[1]) * 1000 : Number(m[1]);
+  };
+  const obs = async (id: string, n: number): Promise<number[]> => {
+    if (!fk) return [];
+    const r = await getJson<{ observations?: Array<{ value?: string }> }>(
+      "https://api.stlouisfed.org/fred/series/observations?series_id=" + id +
+        "&api_key=" + fk + "&file_type=json&sort_order=desc&limit=" + (n + 2),
+      { timeoutMs: 8000 },
+    ).catch(() => null);
+    return (r?.observations ?? [])
+      .filter((o) => o.value && o.value !== ".")
+      .map((o) => Number(o.value))
+      .slice(0, n);
+  };
+  const evs = await getJson<Ev[]>("https://nfs.faireconomy.media/ff_calendar_thisweek.json", {
+    timeoutMs: 8000,
+  }).catch(() => [] as Ev[]);
+  const now = Date.now();
+  const matched = (Array.isArray(evs) ? evs : [])
+    .filter((e) => e.country === "USD" && (e.impact === "High" || e.impact === "Medium"))
+    .map((e) => ({ e, d: defs.find((x) => x.re.test(e.title ?? "")) }))
+    .filter((m): m is { e: Ev; d: Def } => Boolean(m.d))
+    .slice(0, 8);
+  if (!matched.length) return "";
+  const lines = await Promise.all(
+    matched.map(async ({ e, d }) => {
+      const t = e.date ? new Date(e.date).getTime() : NaN;
+      if (isNaN(t)) return "";
+      const when = new Date(t).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+      let line = (e.title ?? "") + " (" + when + "): forecast " + (e.forecast || "none") + ", previous " + (e.previous || "none");
+      if (t > now) return line + ", not released yet";
+      const o = await obs(d.id, d.n);
+      if (o.length < d.n) return line + ", actual could not be read from FRED";
+      const [act, prv] = d.f(o);
+      const rd = (v: number) => (d.unit === "K" ? Math.round(v) : Math.round(v * 10) / 10);
+      const fmt = (v: number) => String(rd(v)) + (d.unit === "%" ? " percent" : " thousand");
+      line += ", actual (FRED) " + fmt(act);
+      const fc = num(e.forecast);
+      if (fc !== null) {
+        const diff = rd(act) - fc;
+        line += diff > 0.001 ? ", above forecast" : diff < -0.001 ? ", below forecast" : ", in line with forecast";
+      }
+      const pv = num(e.previous);
+      if (pv !== null && Math.abs(rd(prv) - pv) > (d.unit === "K" ? 40 : 0.15)) {
+        line += ". PAIRING WARNING: FRED previous " + fmt(prv) + " does not match the calendar previous " + e.previous + ", so this actual may be unconfirmed or revised";
+      }
+      return line;
+    }),
+  );
+  const out = lines.filter(Boolean);
+  if (!out.length) return "";
+  return (
+    "ECONOMIC SNAPSHOT (forecast and previous from the Forex Factory calendar, actual from FRED official data, times in the user's local time): " +
+    out.join(" | ") +
+    ". Do not work out your own surprise. If a line has PAIRING WARNING, say the actual is unconfirmed. This covers US data only, so also search headlines for Fed and global context."
+  );
+      }
 export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolResult> {
   const q = (query ?? "").trim();
   if (!q) return { ok: false, summary: "What should I look up, sir?" };
+    if (/\b(briefing|surprise|actual vs forecast|forecast vs actual|actual versus forecast)\b/.test(q.toLowerCase())) {
+    const snap = await econSnapshot();
+    if (snap) return { ok: true, summary: snap };
+    }
     const NEWS_WORDS =
     /\b(why|news|analysis|analyze|reason|forecast|predict|sentiment|research|headline|headlines|happening|drop|dropping|pump|crash|chart|level|levels)\b/;
   let fastNote = "";
