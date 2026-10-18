@@ -610,7 +610,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
     try {
       const tv = await postJson<{
         answer?: string;
-        results?: { title?: string; content?: string }[];
+        results?: { title?: string; content?: string; url?: string; published_date?: string }[];
       }>(
         "https://api.tavily.com/search",
         JSON.stringify({
