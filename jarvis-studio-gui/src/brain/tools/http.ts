@@ -433,7 +433,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
           ),
         );
       }
-      const parts = (await Promise.all(jobs.map((p) => p.catch(() => "")))).filter(Boolean);
+            const parts = (await Promise.all(jobs.map((p) => p.catch(() => "one FRED series could not be read")))).filter(Boolean);
       if (parts.length) {
         return {
           ok: true,
