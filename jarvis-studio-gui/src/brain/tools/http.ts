@@ -263,7 +263,7 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       };
       try {
         const parts: string[] = [];
-        if (/\b(cpi|inflation)\b/.test(ql)) {
+        if (/\b(cpi|inflation)\b/.test(ql) && !/\bcore\b/.test(ql)) {
           const nsa = await obs("CPIAUCNS", 13);
           const sa = await obs("CPIAUCSL", 2);
           const a = nsa[0], b = nsa[12], c = sa[0], d = sa[1];
@@ -312,6 +312,139 @@ export async function webSearch(query: string, ctx: HttpToolCtx): Promise<ToolRe
       }
     }
                                                         }  
+    {
+    const ql = q.toLowerCase();
+    const fk = (import.meta as any).env?.VITE_FRED_KEY as string | undefined;
+    const want = {
+      core: /\bcore\b/.test(ql) && /\b(cpi|inflation)\b/.test(ql),
+      pce: /\bpce\b/.test(ql),
+      wages: /\b(hourly earnings|average earnings|wages?)\b/.test(ql),
+      claims: /\b(jobless claims|initial claims|unemployment claims)\b/.test(ql),
+      retail: /\bretail sales\b/.test(ql),
+      gdp: /\bgdp\b/.test(ql),
+      yields: /\b(yields?|treasur(?:y|ies)|10.?year|2.?year)\b/.test(ql),
+      dollar: /\b(dollar index|dxy)\b/.test(ql),
+    };
+    if (fk && Object.values(want).some(Boolean)) {
+      const obs = async (id: string, n: number) => {
+        const r = await getJson<{ observations?: Array<{ date?: string; value?: string }> }>(
+          "https://api.stlouisfed.org/fred/series/observations?series_id=" + id +
+            "&api_key=" + fk + "&file_type=json&sort_order=desc&limit=" + n,
+          { timeoutMs: 8000 },
+        );
+        return (r.observations ?? [])
+          .filter((o) => o.value && o.value !== ".")
+          .map((o) => ({ date: o.date ?? "", v: Number(o.value) }));
+      };
+      const pct = (a: number, b: number) => ((a / b - 1) * 100).toFixed(1);
+      const ym = (d: string) => d.slice(0, 7);
+      const jobs: Array<Promise<string>> = [];
+      if (want.core) {
+        jobs.push(
+          Promise.all([obs("CPILFENS", 13), obs("CPILFESL", 2)]).then(([n, s]) =>
+            n[0] && n[12] && s[0] && s[1]
+              ? "Core CPI for " + ym(n[0].date) + ": " + pct(n[0].v, n[12].v) +
+                " percent year over year, " + pct(s[0].v, s[1].v) + " percent month over month"
+              : "",
+          ),
+        );
+      }
+      if (want.pce) {
+        jobs.push(
+          Promise.all([obs("PCEPI", 13), obs("PCEPILFE", 13)]).then(([h, c]) => {
+            const out: string[] = [];
+            if (h[0] && h[1] && h[12]) {
+              out.push("PCE price index for " + ym(h[0].date) + ": " + pct(h[0].v, h[12].v) +
+                " percent year over year, " + pct(h[0].v, h[1].v) + " percent month over month");
+            }
+            if (c[0] && c[1] && c[12]) {
+              out.push("Core PCE for " + ym(c[0].date) + ": " + pct(c[0].v, c[12].v) +
+                " percent year over year, " + pct(c[0].v, c[1].v) + " percent month over month");
+            }
+            return out.join(". ");
+          }),
+        );
+      }
+      if (want.wages) {
+        jobs.push(
+          obs("CES0500000003", 13).then((s) =>
+            s[0] && s[1] && s[12]
+              ? "Average hourly earnings for " + ym(s[0].date) + ": " + s[0].v.toFixed(2) +
+                " dollars, " + pct(s[0].v, s[1].v) + " percent month over month, " +
+                pct(s[0].v, s[12].v) + " percent year over year"
+              : "",
+          ),
+        );
+      }
+      if (want.claims) {
+        jobs.push(
+          obs("ICSA", 2).then((s) =>
+            s[0]
+              ? "Initial jobless claims for the week ending " + s[0].date + ": " +
+                Math.round(s[0].v / 1000) + " thousand" +
+                (s[1] ? ", previous week " + Math.round(s[1].v / 1000) + " thousand" : "")
+              : "",
+          ),
+        );
+      }
+      if (want.retail) {
+        jobs.push(
+          obs("RSAFS", 2).then((s) =>
+            s[0] && s[1]
+              ? "Retail sales for " + ym(s[0].date) + ": " + pct(s[0].v, s[1].v) +
+                " percent month over month (seasonally adjusted)"
+              : "",
+          ),
+        );
+      }
+      if (want.gdp) {
+        jobs.push(
+          obs("A191RL1Q225SBEA", 2).then((s) => {
+            if (!s[0]) return "";
+            const qtr = Math.floor((Number(s[0].date.slice(5, 7)) - 1) / 3) + 1;
+            return "Real GDP growth for Q" + qtr + " " + s[0].date.slice(0, 4) + ": " + s[0].v +
+              " percent annualized" + (s[1] ? ", previous quarter " + s[1].v + " percent" : "");
+          }),
+        );
+      }
+      if (want.yields) {
+        jobs.push(
+          Promise.all([obs("DGS10", 3), obs("DGS2", 3)]).then(([t10, t2]) => {
+            const out: string[] = [];
+            if (t10[0]) {
+              out.push("10 year Treasury yield on " + t10[0].date + ": " + t10[0].v +
+                " percent" + (t10[1] ? ", previous " + t10[1].v : ""));
+            }
+            if (t2[0]) {
+              out.push("2 year Treasury yield on " + t2[0].date + ": " + t2[0].v +
+                " percent" + (t2[1] ? ", previous " + t2[1].v : ""));
+            }
+            return out.join(". ");
+          }),
+        );
+      }
+      if (want.dollar) {
+        jobs.push(
+          obs("DTWEXBGS", 2).then((s) =>
+            s[0]
+              ? "Broad trade-weighted US dollar index (not the DXY) on " + s[0].date + ": " +
+                s[0].v.toFixed(2) + (s[1] ? ", previous " + s[1].v.toFixed(2) : "")
+              : "",
+          ),
+        );
+      }
+      const parts = (await Promise.all(jobs.map((p) => p.catch(() => "")))).filter(Boolean);
+      if (parts.length) {
+        return {
+          ok: true,
+          summary:
+            "RELEASED DATA (FRED, official, may lag the release by a bit and may be revised): " +
+            parts.join(". ") +
+            ". Say these numbers exactly and name the unit. Forecast values are not included here.",
+        };
+      }
+    }
+                 }
   if (/\b(calendar|nfp|non.?farm|fomc|cpi|economic events?|economic data|jobs report|rate decision|high impact)\b/.test(q.toLowerCase())) {
     try {
       const ev = await getJson<
